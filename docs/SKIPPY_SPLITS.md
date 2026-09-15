@@ -366,6 +366,30 @@ MESH_LLM_ARTIFACT_TRANSFER=open mesh-llm serve --model hf://meshllm/<repo>@<revi
 Only immutable `hf://namespace/repo@revision` package refs are eligible for peer
 transfer. Received artifacts are size/SHA-256 verified and installed atomically.
 
+## Phones and other low-memory peers
+
+A phone should join as a **client** whenever it only needs to *use* the mesh
+(`mesh-llm client`, or the Swift/Kotlin `Client` SDK). That path sends token
+IDs over QUIC HTTP and never puts the phone in the activation pipeline.
+
+When two low-memory devices *do* need to split a model peer-to-peer:
+
+- The topology planner treats usable VRAM `<= 8 GiB` as constrained: the auto
+  context floor drops from 64k to 4k and auto lanes cap at 1, so KV can fit.
+- Constrained devices default to Q4_0 K/V even for small models.
+- High-RTT links (measured gossip RTT, or a 40 ms Wi-Fi assumption when a
+  constrained peer has no RTT yet) raise speculative verify-window / native
+  MTP floors. Serial decode is one token per round-trip; a 6-token window at
+  50% accept is the difference between ~12 tok/s and ~3 tok/s on an 80 ms
+  two-stage hop.
+- Do not add extra physical stages to a phone mesh. Every hop is on the decode
+  critical path. Two stages plus speculation is the intended shape.
+
+A phone still cannot be a validated iOS *serving* node today (SDK local serving
+is macOS/Android-CPU). These planner changes are what make a future on-device
+stage, or an Android/CPU peer, able to join a split without immediately OOM-ing
+or serial-decoding at cellular RTT.
+
 ## More details
 
 - [LAYER_PACKAGE_REPOS.md](LAYER_PACKAGE_REPOS.md) explains how to contribute packages.

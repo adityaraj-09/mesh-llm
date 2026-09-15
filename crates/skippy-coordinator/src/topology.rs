@@ -1,10 +1,15 @@
 use std::cmp::Ordering;
 
+mod device_class;
 mod locked;
 
+pub use device_class::{
+    CONSTRAINED_DEVICE_USABLE_VRAM_BYTES, MINIMUM_AUTO_CONTEXT_LENGTH,
+    MINIMUM_CONSTRAINED_AUTO_CONTEXT_LENGTH, any_usable_vram_is_constrained, auto_context_floor,
+    minimum_valid_context_for, usable_vram_is_constrained,
+};
 pub use locked::{LockedTopologyStage, plan_locked_topology};
 
-const MINIMUM_AUTO_CONTEXT_LENGTH: u32 = 65_536;
 const CONTEXT_STEPS: &[u32] = &[512, 1024, 2048, 4096, 8192, 16_384, 32_768, 65_536, 131_072];
 
 /// Minimum context length per session for lane ceiling calculation.
@@ -144,13 +149,15 @@ fn plan_topology_with_required_stage0(
 ) -> Result<TopologyPlan, TopologyPlanError> {
     validate_input(input)?;
 
-    let minimum_context = minimum_valid_context(input.native_context_length);
+    let nodes = usable_nodes(&input.nodes);
+    let constrained =
+        any_usable_vram_is_constrained(nodes.iter().map(|node| node.usable_vram_bytes));
+    let minimum_context = minimum_valid_context_for(input.native_context_length, constrained);
     let context_candidates = context_candidates(
         input.native_context_length,
         minimum_context,
         input.context_length_override,
     )?;
-    let nodes = usable_nodes(&input.nodes);
     let latency_aware = latency_aware_planning(input, &nodes);
 
     let minimum_nodes = input.minimum_nodes.max(1);
@@ -166,6 +173,14 @@ fn plan_topology_with_required_stage0(
             for parallel_lanes in lane_candidates.iter().copied() {
                 let mut best_for_count: Option<CandidatePlan> = None;
                 for_each_node_subset(&nodes, node_count, |subset| {
+                    if input.parallel_lanes_override.is_none()
+                        && any_usable_vram_is_constrained(
+                            subset.iter().map(|node| node.usable_vram_bytes),
+                        )
+                        && parallel_lanes > 1
+                    {
+                        return;
+                    }
                     let Some(candidate) =
                         fit_candidate(input, subset, context_length, parallel_lanes)
                     else {
@@ -290,7 +305,7 @@ fn parallel_lane_candidates(
 }
 
 pub fn minimum_valid_context(native_context: u32) -> u32 {
-    native_context.clamp(1, MINIMUM_AUTO_CONTEXT_LENGTH)
+    minimum_valid_context_for(native_context, false)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -978,13 +993,51 @@ mod tests {
 
     #[test]
     fn rejects_below_minimum_context_floor() {
+        // Two 8 GiB peers cannot hold a 40 GiB model at any context. Constrained
+        // devices lower the auto floor to 4k, so the rejection reports that floor.
         let err = plan_topology(&input(vec![node("tiny-a", 8), node("tiny-b", 8)]))
-            .expect_err("context below the 64k floor should be rejected");
+            .expect_err("weights still do not fit on two 8 GiB peers");
 
         assert_eq!(
             err,
             TopologyPlanError::NoValidTopology {
-                minimum_context: 65_536
+                minimum_context: MINIMUM_CONSTRAINED_AUTO_CONTEXT_LENGTH
+            }
+        );
+    }
+
+    #[test]
+    fn phone_class_peers_plan_below_datacenter_context_floor() {
+        let mut request = input(vec![node("phone-a", 6), node("phone-b", 6)]);
+        request.layer_count = 8;
+        request.model_weight_bytes = 4 * GIB;
+        request.layer_weight_bytes = vec![GIB / 2; 8];
+        request.kv_bytes_per_token = 512 * 1024;
+        request.native_context_length = 131_072;
+        request.minimum_nodes = 2;
+        request.parallel_lanes_override = None;
+
+        let plan =
+            plan_topology(&request).expect("two 6 GiB phones should fit a 4 GiB slice at 4k");
+
+        assert_eq!(plan.stages.len(), 2);
+        assert!(
+            plan.context_length >= MINIMUM_CONSTRAINED_AUTO_CONTEXT_LENGTH
+                && plan.context_length < MINIMUM_AUTO_CONTEXT_LENGTH,
+            "phone-class split should land below the 64k datacenter floor, got {}",
+            plan.context_length
+        );
+        assert_eq!(plan.parallel_lanes, 1);
+    }
+
+    #[test]
+    fn unconstrained_peers_keep_64k_rejection_floor() {
+        let err = plan_topology(&input(vec![node("gpu-a", 9), node("gpu-b", 9)]))
+            .expect_err("9+9 GiB still cannot hold a 40 GiB model plus 64k KV");
+        assert_eq!(
+            err,
+            TopologyPlanError::NoValidTopology {
+                minimum_context: MINIMUM_AUTO_CONTEXT_LENGTH
             }
         );
     }

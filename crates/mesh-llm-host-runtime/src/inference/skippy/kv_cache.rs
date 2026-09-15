@@ -42,6 +42,26 @@ pub(crate) struct KvCachePolicy {
 impl KvCachePolicy {
     const LARGE_MODEL_MIN_BYTES: u64 = 50 * 1024 * 1024 * 1024;
 
+    /// Default KV cache policy, tiered by device memory first and model size second.
+    ///
+    /// Phone-class and other constrained devices (`<= 8 GiB` usable) always get
+    /// Q4_0 K/V so a 7B-class model can keep a usable context without swapping.
+    /// Larger hosts keep the model-size tiers in [`Self::for_model_size`].
+    pub(crate) fn for_model_and_device(
+        model_bytes: u64,
+        allocatable_memory_bytes: Option<u64>,
+    ) -> Self {
+        if allocatable_memory_bytes
+            .is_some_and(skippy_coordinator::topology::usable_vram_is_constrained)
+        {
+            return Self {
+                k_type: KvCacheType::Q4_0,
+                v_type: KvCacheType::Q4_0,
+            };
+        }
+        Self::for_model_size(model_bytes)
+    }
+
     /// Default KV cache policy, tiered by model size.
     ///
     /// Models >= 50 GB use Q4_0 K + Q4_0 V to keep KV cache small enough
@@ -125,6 +145,26 @@ mod tests {
     #[test]
     fn small_model_uses_q8_0() {
         let policy = KvCachePolicy::for_model_size(10 * 1024 * 1024 * 1024);
+        assert_eq!(policy.k_type, KvCacheType::Q8_0);
+        assert_eq!(policy.v_type, KvCacheType::Q8_0);
+    }
+
+    #[test]
+    fn constrained_device_uses_q4_0_even_for_small_models() {
+        let policy = KvCachePolicy::for_model_and_device(
+            4 * 1024 * 1024 * 1024,
+            Some(6 * 1024 * 1024 * 1024),
+        );
+        assert_eq!(policy.k_type, KvCacheType::Q4_0);
+        assert_eq!(policy.v_type, KvCacheType::Q4_0);
+    }
+
+    #[test]
+    fn unconstrained_device_keeps_model_size_tier() {
+        let policy = KvCachePolicy::for_model_and_device(
+            10 * 1024 * 1024 * 1024,
+            Some(24 * 1024 * 1024 * 1024),
+        );
         assert_eq!(policy.k_type, KvCacheType::Q8_0);
         assert_eq!(policy.v_type, KvCacheType::Q8_0);
     }

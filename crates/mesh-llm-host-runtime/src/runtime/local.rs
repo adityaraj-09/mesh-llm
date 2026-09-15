@@ -864,7 +864,7 @@ pub(super) async fn start_local_openai_model(
     // (Flash Attention off, or a head_dim not divisible by the block size) so
     // planning and the load agree and the context build does not fail. Explicit
     // user overrides below are never guarded — they must fail loudly.
-    let kv_cache = skippy::KvCachePolicy::for_model_size(total_model_bytes)
+    let kv_cache = skippy::KvCachePolicy::for_model_and_device(total_model_bytes, Some(my_vram))
         .guarded_for_model(compact_meta.as_ref());
     let effective_cache_type_k = spec
         .cache_type_k_override

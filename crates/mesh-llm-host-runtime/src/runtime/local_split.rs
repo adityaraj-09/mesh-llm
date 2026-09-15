@@ -1,5 +1,6 @@
 mod attestation;
 mod coordinator;
+mod decode_amplification;
 mod loading;
 mod recovery;
 #[cfg(test)]
