@@ -1,4 +1,4 @@
-#![cfg(feature = "serving")]
+#![cfg(feature = "embedded-serving")]
 
 use mesh_llm_sdk::native_runtime::{
     CURRENT_MESH_VERSION, current_skippy_abi_version, native_runtime_versions_match_current_sdk,

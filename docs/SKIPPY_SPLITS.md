@@ -368,9 +368,19 @@ transfer. Received artifacts are size/SHA-256 verified and installed atomically.
 
 ## Phones and other low-memory peers
 
-A phone should join as a **client** whenever it only needs to *use* the mesh
-(`mesh-llm client`, or the Swift/Kotlin `Client` SDK). That path sends token
-IDs over QUIC HTTP and never puts the phone in the activation pipeline.
+A phone can host a **small** model as a server when the iOS XCFramework or
+Android AAR is built with `embedded-runtime`. Those packages now compile
+`mesh-llm-sdk/static-serving`, so Skippy is linked into `libmeshllm_ffi`
+instead of dlopening a desktop native-runtime artifact. Load a Q4 GGUF from
+app-owned storage; on-device serving turns mmap on, mlock off, caps context at
+4k, and uses Q4 K/V. Android stays on CPU (`n_gpu_layers = 0`); iOS keeps Metal
+offload. This is wired, not yet CI-certified on a physical device — treat it as
+experimental, pick a 0.5B–3B Q4, and expect jetsam/backgrounding limits.
+
+A phone should still join as a **client** whenever it only needs to *use* a
+bigger mesh (`mesh-llm client`, or the Swift/Kotlin `Client` SDK). That path
+sends token IDs over QUIC HTTP and never puts the phone in the activation
+pipeline.
 
 When two low-memory devices *do* need to split a model peer-to-peer:
 
@@ -385,10 +395,11 @@ When two low-memory devices *do* need to split a model peer-to-peer:
 - Do not add extra physical stages to a phone mesh. Every hop is on the decode
   critical path. Two stages plus speculation is the intended shape.
 
-A phone still cannot be a validated iOS *serving* node today (SDK local serving
-is macOS/Android-CPU). These planner changes are what make a future on-device
-stage, or an Android/CPU peer, able to join a split without immediately OOM-ing
-or serial-decoding at cellular RTT.
+A phone still cannot be treated as a CI-validated serving node: there is no
+on-device smoke in GitHub Actions, iOS background GPU is limited, and Android
+is CPU-only in the AAR. The static-link path plus the 4k/Q4 planner is what
+makes an Android/CPU peer or a future on-device iOS stage able to host a small
+model without immediately OOM-ing or serial-decoding at cellular RTT.
 
 ## More details
 

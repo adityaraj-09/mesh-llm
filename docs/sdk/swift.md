@@ -152,6 +152,14 @@ MESH_SDK_MODEL_REF=Qwen2.5-3B-Instruct-Q4_K_M \
 swift run --package-path sdk/swift/example/MeshExampleApp
 ```
 
+## Phone serving (experimental)
+
+iOS XCFramework slices compile `mesh-llm-sdk/static-serving`, so Skippy is
+linked into `MeshLLMFFI`. Do not call `NativeRuntime.resolve` to download a
+desktop runtime on device. Put a small Q4 GGUF in the app sandbox and load it
+with `Node.serving.load`. Context is capped at 4k with mmap and Q4 K/V. This
+is not CI-certified on a physical iPhone.
+
 ## Console Assets
 
 Tagged Swift package releases include console assets as SwiftPM resources when

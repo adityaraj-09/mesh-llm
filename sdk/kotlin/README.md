@@ -113,11 +113,13 @@ serving is not available for the current target or native artifact.
 |---|---:|---:|---:|
 | JVM macOS | yes | yes | yes with a matching `libmeshllm_ffi.dylib` |
 | JVM Linux | yes | yes | yes with a matching `libmeshllm_ffi.so` |
-| Android | yes | yes | planned validation |
+| Android | yes | yes | experimental (CPU Skippy linked into the AAR) |
 
-Targets without validated local serving must throw
+Targets without a serving build must throw
 `MeshException.ServingUnsupported` instead of silently degrading to a fake
-implementation.
+implementation. Android AARs that include `embedded-runtime` host CPU Skippy
+inside `libmeshllm_ffi.so` and should not copy a desktop native runtime into
+the APK.
 
 ## Local JVM Example
 

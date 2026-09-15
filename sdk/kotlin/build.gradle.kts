@@ -90,7 +90,7 @@ fun resolveAndroidNdkHome(): String {
 
 // Task to build native libraries for all Android ABIs
 val buildNativeLibs by tasks.registering {
-    description = "Build mesh-llm-ffi shared libraries with embedded serving for all Android ABIs"
+    description = "Build mesh-llm-ffi shared libraries with statically linked CPU Skippy for all Android ABIs"
     group = "build"
 
     val androidPlatform = System.getenv("MESH_LLM_ANDROID_PLATFORM") ?: "android-26"

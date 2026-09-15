@@ -19,6 +19,12 @@ does not build them from source as part of SDK compilation. Runtime artifacts
 are fetched from Mesh LLM release manifests by default, but compatibility is
 checked against the exact Skippy ABI version.
 
+Phone FFI (iOS XCFramework / Android AAR) is different: those packages compile
+with `static-serving` so Skippy is linked into `libmeshllm_ffi`. Do not download
+a desktop `meshllm-native-runtime-*` into an APK or iOS app. Use a small Q4
+GGUF, mmap, and the 4k constrained context floor. That path is wired but not
+yet CI-certified on a physical device.
+
 ## Client Transport Example
 
 ```toml

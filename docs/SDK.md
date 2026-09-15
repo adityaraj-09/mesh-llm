@@ -13,9 +13,11 @@ The SDK is split into two parts:
 - **Native runtime artifacts** provide local serving for a specific
   platform/runtime flavor, such as macOS Metal or Linux CUDA.
 
-Client-only mesh inference only needs the language SDK. Local serving also
-needs a matching native runtime artifact or an embedded Rust
-`ServingController`.
+Client-only mesh inference only needs the language SDK. Desktop local serving
+also needs a matching native runtime artifact or an embedded Rust
+`ServingController`. iOS and Android FFI builds instead link Skippy into the
+language library (`static-serving`); do not ship a desktop native-runtime
+directory inside an app.
 
 ## Platform Support
 
@@ -28,10 +30,10 @@ run inference but cannot currently serve local models.
 | Rust SDK on Linux | yes | yes | requires an attached `ServingController` |
 | Swift macOS | yes | yes | yes with a matching native runtime artifact |
 | Swift Mac Catalyst | yes | yes | not currently advertised |
-| Swift iOS | yes | limited by app filesystem policy | no |
+| Swift iOS | yes | limited by app filesystem policy | experimental: Skippy linked into MeshLLMFFI, not CI-certified |
 | Kotlin JVM macOS | yes | yes | yes with a matching native runtime artifact |
 | Kotlin JVM Linux | yes | yes | yes with a matching native runtime artifact |
-| Kotlin Android | yes | yes | not currently advertised |
+| Kotlin Android | yes | yes | experimental: CPU Skippy linked into the AAR, not CI-certified |
 | Node.js macOS | yes | yes | yes with a matching native runtime artifact |
 | Node.js Linux | yes | yes | yes with a matching native runtime artifact |
 | Node.js Windows | yes | yes | yes with a matching native runtime artifact |

@@ -3,10 +3,10 @@
 use std::collections::BTreeMap;
 use std::net::IpAddr;
 use std::path::PathBuf;
-#[cfg(feature = "serving")]
+#[cfg(feature = "embedded-serving")]
 use std::time::Duration;
 
-#[cfg(feature = "serving")]
+#[cfg(feature = "embedded-serving")]
 use anyhow::Result;
 
 #[cfg(feature = "client")]
@@ -24,16 +24,16 @@ pub mod node {
     pub use mesh_llm_api_server::*;
 }
 
-#[cfg(feature = "serving")]
+#[cfg(feature = "embedded-serving")]
 pub mod embedded_node;
 
-#[cfg(feature = "serving")]
+#[cfg(feature = "embedded-serving")]
 pub use embedded_node::{MeshNode, MeshNodeBuilder, MeshNodeStatus, OpenAiClient};
 
-#[cfg(feature = "serving")]
+#[cfg(feature = "embedded-serving")]
 pub use mesh_llm_embedded_runtime::initialize_host_runtime;
 
-#[cfg(feature = "serving")]
+#[cfg(feature = "embedded-serving")]
 pub mod embedded_runtime {
     pub use mesh_llm_embedded_runtime::{
         EmbeddedChatMessage, EmbeddedMeshAdmissionConfig, EmbeddedMeshDiscoveryMode,
@@ -47,7 +47,7 @@ pub mod embedded_runtime {
     };
 }
 
-#[cfg(feature = "serving")]
+#[cfg(feature = "embedded-serving")]
 pub mod native_runtime {
     pub use mesh_llm_runtime_install::*;
 }
@@ -174,7 +174,7 @@ pub struct ServingConfig {
     pub max_vram_gb: Option<f64>,
 }
 
-#[cfg(feature = "serving")]
+#[cfg(feature = "embedded-serving")]
 macro_rules! impl_common_builder_methods {
     () => {
         pub fn api_port(mut self, port: u16) -> Self {
@@ -423,12 +423,12 @@ macro_rules! impl_common_builder_methods {
     };
 }
 
-#[cfg(feature = "serving")]
+#[cfg(feature = "embedded-serving")]
 pub struct EmbeddedNodeHandle {
     inner: mesh_llm_embedded_runtime::EmbeddedMeshNodeHandle,
 }
 
-#[cfg(feature = "serving")]
+#[cfg(feature = "embedded-serving")]
 impl EmbeddedNodeHandle {
     pub fn api_base_url(&self) -> &str {
         self.inner.api_base_url()
@@ -455,7 +455,7 @@ impl EmbeddedNodeHandle {
     }
 }
 
-#[cfg(feature = "serving")]
+#[cfg(feature = "embedded-serving")]
 #[derive(Clone, Debug)]
 pub struct EmbeddedNodeStatus {
     pub api_base_url: String,
@@ -464,7 +464,7 @@ pub struct EmbeddedNodeStatus {
     pub payload: serde_json::Value,
 }
 
-#[cfg(feature = "serving")]
+#[cfg(feature = "embedded-serving")]
 impl From<mesh_llm_embedded_runtime::EmbeddedMeshNodeStatus> for EmbeddedNodeStatus {
     fn from(status: mesh_llm_embedded_runtime::EmbeddedMeshNodeStatus) -> Self {
         Self {
@@ -476,7 +476,7 @@ impl From<mesh_llm_embedded_runtime::EmbeddedMeshNodeStatus> for EmbeddedNodeSta
     }
 }
 
-#[cfg(feature = "serving")]
+#[cfg(feature = "embedded-serving")]
 pub mod client {
     use super::*;
 
@@ -537,7 +537,7 @@ pub mod client {
     }
 }
 
-#[cfg(feature = "serving")]
+#[cfg(feature = "embedded-serving")]
 pub mod serve {
     use super::*;
 
@@ -619,15 +619,15 @@ pub mod serve {
     }
 }
 
-#[cfg(feature = "serving")]
+#[cfg(feature = "embedded-serving")]
 #[derive(Clone, Copy, Debug)]
 enum EmbeddedMode {
-    #[cfg(feature = "serving")]
+    #[cfg(feature = "embedded-serving")]
     Serve,
     Client,
 }
 
-#[cfg(feature = "serving")]
+#[cfg(feature = "embedded-serving")]
 struct EmbeddedNodeParts {
     mode: EmbeddedMode,
     http: HttpConfig,
@@ -639,13 +639,13 @@ struct EmbeddedNodeParts {
     startup_timeout: Duration,
 }
 
-#[cfg(feature = "serving")]
+#[cfg(feature = "embedded-serving")]
 async fn start_embedded_node(parts: EmbeddedNodeParts) -> Result<EmbeddedNodeHandle> {
     let handle = mesh_llm_embedded_runtime::start_embedded_node(host_config(parts)).await?;
     Ok(EmbeddedNodeHandle { inner: handle })
 }
 
-#[cfg(feature = "serving")]
+#[cfg(feature = "embedded-serving")]
 fn host_config(parts: EmbeddedNodeParts) -> mesh_llm_embedded_runtime::EmbeddedMeshNodeConfig {
     mesh_llm_embedded_runtime::EmbeddedMeshNodeConfig {
         mode: match parts.mode {
@@ -726,11 +726,11 @@ fn host_config(parts: EmbeddedNodeParts) -> mesh_llm_embedded_runtime::EmbeddedM
 
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "serving")]
+    #[cfg(feature = "embedded-serving")]
     use super::*;
 
     #[test]
-    #[cfg(feature = "serving")]
+    #[cfg(feature = "embedded-serving")]
     fn client_builder_sets_network_fields() {
         let config = client::EmbeddedClientConfig::builder()
             .auto_join(true)
@@ -752,7 +752,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "serving")]
+    #[cfg(feature = "embedded-serving")]
     fn serve_builder_sets_model_fields() {
         let config = serve::EmbeddedServeConfig::builder()
             .model("unsloth/Qwen3-0.6B-GGUF:Q4_K_M")
@@ -769,7 +769,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "serving")]
+    #[cfg(feature = "embedded-serving")]
     fn serve_builder_sets_admission_fields() {
         let config = serve::EmbeddedServeConfig::builder()
             .owner_key("/tmp/sprout-owner.json")
@@ -837,7 +837,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "serving")]
+    #[cfg(feature = "embedded-serving")]
     fn signed_join_tokens_sets_genesis_requirement_without_lowering_existing_bound() {
         let config = serve::EmbeddedServeConfig::builder()
             .signed_join_tokens(true)

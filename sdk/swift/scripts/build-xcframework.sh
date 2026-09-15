@@ -9,6 +9,8 @@ XCFRAMEWORK_DIR="$SWIFT_DIR/Generated"
 FRAMEWORK_NAME="MeshLLMFFI"
 GENERATED_SWIFT="$SWIFT_DIR/Sources/MeshLLM/Generated/mesh_ffi.swift"
 RUST_FEATURES="embedded-runtime"
+# iOS/Android (and Catalyst) compile mesh-llm-sdk/static-serving so Skippy is
+# linked into MeshLLMFFI. Desktop slices still use the serving+dynamic feature.
 SWIFT_TARGET_OUTPUT_DIR="${SWIFT_TARGET_OUTPUT_DIR:-$REPO_ROOT/dist/swift-targets}"
 APPLE_TARGETS=(
   aarch64-apple-ios

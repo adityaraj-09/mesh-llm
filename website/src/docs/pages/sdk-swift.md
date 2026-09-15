@@ -126,7 +126,7 @@ do {
 }
 ```
 
-Handle `MeshError.ServingUnsupported` for iOS and other targets without validated local serving. The current support line is macOS local serving; Mac Catalyst is under validation and iOS should use `Client` to reach another serving node.
+Handle `MeshError.ServingUnsupported` when this XCFramework was built without `embedded-runtime`. iOS and Android XCFramework slices link Skippy into `MeshLLMFFI`; do not call `NativeRuntime.resolve` to download a desktop runtime on those targets. Use a small Q4 GGUF in the app sandbox, mmap, and the 4k context floor. macOS still resolves a matching native runtime. This on-device path is experimental and not CI-certified on a physical device.
 
 ## Console assets
 

@@ -149,6 +149,13 @@ MESH_SDK_MODEL_REF=Qwen2.5-3B-Instruct-Q4_K_M \
 ./gradlew --no-daemon run -p sdk/kotlin/example/example-jvm
 ```
 
+## Phone serving (experimental)
+
+Android AARs compile `mesh-llm-sdk/static-serving` with CPU llama.cpp, so Skippy
+is inside `libmeshllm_ffi.so`. Do not copy a desktop `meshllm-native-runtime-*`
+into the APK. Load a small Q4 GGUF from app storage with `DevicePolicy.Cpu` or
+`Auto`. This is not CI-certified on a physical device.
+
 ## Console Assets
 
 Published Kotlin packages that advertise console support include the built web
