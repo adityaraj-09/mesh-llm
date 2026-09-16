@@ -54,6 +54,7 @@ Use [SKIPPY_SPLITS.md](SKIPPY_SPLITS.md) for Skippy split-serving workflows.
 | [plans/](plans/) | Narrow implementation plans that are not yet general design docs |
 | [specs/](specs/) | Focused behavior specs for individual features |
 | [design/OPENAI_GUARDRAILS.md](design/OPENAI_GUARDRAILS.md) | OpenAI guardrail rollout defaults, v1 limits, telemetry privacy, and evidence scaffolding |
+| [research/WORLD_ADDRESS_SPACE.md](research/WORLD_ADDRESS_SPACE.md) | Research discovery: world address space as a systems primitive for autonomous software |
 
 Per-crate docs stay with their crates. The main binary crate overview lives at
 [../crates/mesh-llm/README.md](../crates/mesh-llm/README.md), and the web
