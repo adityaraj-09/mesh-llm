@@ -1,8 +1,10 @@
 use crate::inference::skippy;
 use anyhow::{Context, Result};
+use skippy_coordinator::decode_amplification::DEFAULT_TARGET_DECODE_TPOT_MS;
 use skippy_coordinator::topology::{
     LockedTopologyStage, TopologyNode, TopologyPlanningInput, TopologyStagePlan,
-    minimum_valid_context, plan_locked_topology, plan_topology, plan_topology_with_stage0,
+    any_usable_vram_is_constrained, minimum_valid_context_for, plan_locked_topology, plan_topology,
+    plan_topology_with_stage0,
 };
 use std::collections::HashMap;
 
@@ -30,7 +32,6 @@ use super::split_topology_lock::LockedSplitStageAssignment;
 // with `--max-vram`.
 const RUNTIME_NODE_HEADROOM_NUMERATOR: u64 = 1;
 const RUNTIME_NODE_HEADROOM_DENOMINATOR: u64 = 10;
-const DEFAULT_TARGET_DECODE_TPOT_MS: u32 = 33;
 
 // KV compute reserve, mirroring `skippy_coordinator::topology`'s
 // `KV_COMPUTE_RESERVE_*`. Charging KV at 100/85 holds back 15% of post-weight
@@ -413,7 +414,14 @@ fn split_topology_failure_reason(
     excluded: &[SplitParticipantExclusion],
     resources: SplitTopologyResourceInputs,
 ) -> String {
-    let minimum_context = minimum_valid_context(resources.native_context_length);
+    let minimum_context = minimum_valid_context_for(
+        resources.native_context_length,
+        any_usable_vram_is_constrained(participants.iter().map(|participant| {
+            participant
+                .vram_bytes
+                .saturating_sub(default_runtime_headroom_bytes(participant.vram_bytes))
+        })),
+    );
     let evaluated_context = resources.ctx_size_override.unwrap_or(minimum_context);
     let evaluated_lanes = resources.parallel_override.unwrap_or(1).max(1);
     let weight_per_layer = package

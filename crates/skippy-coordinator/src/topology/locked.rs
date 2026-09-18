@@ -1,8 +1,9 @@
 use super::{
     CandidatePlan, TopologyPlan, TopologyPlanError, TopologyPlanningInput, TopologyStagePlan,
-    UsableNode, context_candidates, decode_tpot_target_met, estimate_decode_network_ms_per_token,
-    layer_required_bytes, layer_weight_bytes, minimum_valid_context, parallel_lane_candidates,
-    recurrent_bytes_by_layer, sum_u64, usable_nodes, validate_input,
+    UsableNode, any_usable_vram_is_constrained, context_candidates, decode_tpot_target_met,
+    estimate_decode_network_ms_per_token, layer_required_bytes, layer_weight_bytes,
+    minimum_valid_context_for, parallel_lane_candidates, recurrent_bytes_by_layer, sum_u64,
+    usable_nodes, validate_input,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -19,13 +20,15 @@ pub fn plan_locked_topology(
     validate_input(input)?;
     validate_locked_stages(input, locked_stages)?;
 
-    let minimum_context = minimum_valid_context(input.native_context_length);
+    let nodes = usable_nodes(&input.nodes);
+    let constrained =
+        any_usable_vram_is_constrained(nodes.iter().map(|node| node.usable_vram_bytes));
+    let minimum_context = minimum_valid_context_for(input.native_context_length, constrained);
     let context_candidates = context_candidates(
         input.native_context_length,
         minimum_context,
         input.context_length_override,
     )?;
-    let nodes = usable_nodes(&input.nodes);
     let locked_nodes = locked_stage_nodes(&nodes, locked_stages)?;
 
     for context_length in context_candidates {
@@ -36,6 +39,9 @@ pub fn plan_locked_topology(
             input.reserved_sequence_ids,
         )?;
         for parallel_lanes in lane_candidates.iter().copied() {
+            if input.parallel_lanes_override.is_none() && constrained && parallel_lanes > 1 {
+                continue;
+            }
             if let Some(candidate) = fit_locked_candidate(
                 input,
                 locked_stages,

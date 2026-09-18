@@ -78,7 +78,7 @@ pub struct HostRuntimeProfile {
 impl HostRuntimeProfile {
     pub fn current_without_gpu_probe() -> Self {
         let mut available_flavors = BTreeSet::from([NativeRuntimeBackendKind::Cpu]);
-        if cfg!(target_os = "macos") {
+        if cfg!(any(target_os = "macos", target_os = "ios")) {
             available_flavors.insert(NativeRuntimeBackendKind::Metal);
         }
         Self {

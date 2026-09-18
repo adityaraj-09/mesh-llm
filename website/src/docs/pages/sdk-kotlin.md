@@ -127,9 +127,9 @@ Catch `MeshException.ServingUnsupported` and show an actionable message when the
 
 ## Android support
 
-Android apps can use the SDK for mesh inference and model-management APIs. Local serving is not currently advertised for Android, so an Android app should use `Client` to reach a serving node or display the typed unsupported error rather than trying to load a desktop runtime into the APK.
+Android AARs built with `embedded-runtime` link CPU Skippy into `libmeshllm_ffi.so`. Do not copy a desktop native-runtime directory into the APK. Put a small Q4 GGUF in app storage, call `Node.serving.load(...)` with `DevicePolicy.Cpu` or `Auto`, and expect mmap + 4k context + Q4 K/V. This is experimental and not CI-certified on a physical device.
 
-When Android serving is validated, the packaging contract will need an ABI-specific native runtime, app-compatible storage, lifecycle handling, and a verified memory budget. Keep those concerns behind the SDK rather than copying desktop runtime paths into the app.
+Catch `MeshException.ServingUnsupported` when the selected artifact was built without embedded serving.
 
 ## Console assets
 

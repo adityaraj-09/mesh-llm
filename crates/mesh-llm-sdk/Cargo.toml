@@ -15,15 +15,22 @@ default = ["client"]
 client = ["dep:mesh-llm-api-client"]
 console = ["dep:mesh-llm-console-server", "mesh-llm-embedded-runtime?/web-ui"]
 node = ["client", "dep:mesh-llm-api-server"]
-serving = [
+# In-process serving without dlopen. Phone FFI (iOS/Android) uses this so
+# Skippy/llama.cpp is linked into libmeshllm_ffi instead of loading a desktop
+# native-runtime artifact that does not exist for those targets.
+embedded-serving = [
     "node",
     "dep:anyhow",
     "dep:mesh-llm-embedded-runtime",
     "dep:mesh-llm-runtime-install",
-    "mesh-llm-embedded-runtime/dynamic-native-runtime",
     "dep:reqwest",
     "dep:serde",
     "dep:serde_json",
+]
+static-serving = ["embedded-serving"]
+serving = [
+    "embedded-serving",
+    "mesh-llm-embedded-runtime/dynamic-native-runtime",
 ]
 
 [lints]

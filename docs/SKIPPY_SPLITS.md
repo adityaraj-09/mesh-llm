@@ -366,6 +366,41 @@ MESH_LLM_ARTIFACT_TRANSFER=open mesh-llm serve --model hf://meshllm/<repo>@<revi
 Only immutable `hf://namespace/repo@revision` package refs are eligible for peer
 transfer. Received artifacts are size/SHA-256 verified and installed atomically.
 
+## Phones and other low-memory peers
+
+A phone can host a **small** model as a server when the iOS XCFramework or
+Android AAR is built with `embedded-runtime`. Those packages now compile
+`mesh-llm-sdk/static-serving`, so Skippy is linked into `libmeshllm_ffi`
+instead of dlopening a desktop native-runtime artifact. Load a Q4 GGUF from
+app-owned storage; on-device serving turns mmap on, mlock off, caps context at
+4k, and uses Q4 K/V. Android stays on CPU (`n_gpu_layers = 0`); iOS keeps Metal
+offload. This is wired, not yet CI-certified on a physical device — treat it as
+experimental, pick a 0.5B–3B Q4, and expect jetsam/backgrounding limits.
+
+A phone should still join as a **client** whenever it only needs to *use* a
+bigger mesh (`mesh-llm client`, or the Swift/Kotlin `Client` SDK). That path
+sends token IDs over QUIC HTTP and never puts the phone in the activation
+pipeline.
+
+When two low-memory devices *do* need to split a model peer-to-peer:
+
+- The topology planner treats usable VRAM `<= 8 GiB` as constrained: the auto
+  context floor drops from 64k to 4k and auto lanes cap at 1, so KV can fit.
+- Constrained devices default to Q4_0 K/V even for small models.
+- High-RTT links (measured gossip RTT, or a 40 ms Wi-Fi assumption when a
+  constrained peer has no RTT yet) raise speculative verify-window / native
+  MTP floors. Serial decode is one token per round-trip; a 6-token window at
+  50% accept is the difference between ~12 tok/s and ~3 tok/s on an 80 ms
+  two-stage hop.
+- Do not add extra physical stages to a phone mesh. Every hop is on the decode
+  critical path. Two stages plus speculation is the intended shape.
+
+A phone still cannot be treated as a CI-validated serving node: there is no
+on-device smoke in GitHub Actions, iOS background GPU is limited, and Android
+is CPU-only in the AAR. The static-link path plus the 4k/Q4 planner is what
+makes an Android/CPU peer or a future on-device iOS stage able to host a small
+model without immediately OOM-ing or serial-decoding at cellular RTT.
+
 ## More details
 
 - [LAYER_PACKAGE_REPOS.md](LAYER_PACKAGE_REPOS.md) explains how to contribute packages.

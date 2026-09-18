@@ -175,10 +175,12 @@ scripts/verify-sdk-console-assets.sh --sdk swift
 |---|---:|---:|---:|
 | macOS | yes | yes | yes, validated with the host Metal framework |
 | Mac Catalyst | yes | yes | planned validation |
-| iOS | yes | limited by app filesystem policy | no |
+| iOS | yes | limited by app filesystem policy | experimental (Skippy linked into MeshLLMFFI) |
 
-Targets without validated local serving must throw `MeshError.ServingUnsupported`
-instead of silently degrading to a fake implementation.
+Targets without a serving build must throw `MeshError.ServingUnsupported`
+instead of silently degrading to a fake implementation. iOS slices that include
+`embedded-runtime` host Skippy inside MeshLLMFFI and should not download a
+desktop native runtime.
 
 ## App Store Export Compliance
 

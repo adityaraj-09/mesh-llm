@@ -11,7 +11,7 @@ The Mesh SDKs let an application either connect to an existing mesh or embed a c
 | Role | What it does | What it needs |
 | --- | --- | --- |
 | `Client` | Joins a private mesh or connects to a selected public mesh and runs inference. | SDK package, owner keypair, and invite token or public-mesh discovery. |
-| `Node` | Includes the client role, model search/download, local model loading, serving, and optional console hosting. | SDK package plus a compatible native runtime artifact for local serving. |
+| `Node` | Includes the client role, model search/download, local model loading, serving, and optional console hosting. | SDK package plus a compatible native runtime artifact on desktop, or Skippy linked into the iOS/Android FFI library. |
 
 Use `Client` when another machine already serves the model. Use `Node` when the application should own local model files, load/unload decisions, and serving lifecycle.
 
@@ -31,7 +31,7 @@ stop
 Serving applications add runtime and model lifecycle:
 
 ```text
-resolve a native runtime
+resolve a native runtime (desktop only; skip on iOS/Android)
 create Node
 start
 download or locate a model
@@ -50,16 +50,16 @@ Persist the owner keypair in the host application's secure storage. Generate an 
 | Rust on macOS/Linux | yes | yes | yes with `serving` and a compatible native runtime |
 | Node.js on macOS/Linux/Windows | yes | yes | yes with a compatible native runtime |
 | JVM on macOS/Linux | yes | yes | yes with a matching native runtime library |
-| Android | yes | yes | not currently advertised |
+| Android | yes | yes | experimental: CPU Skippy linked into the AAR |
 | Swift on macOS | yes | yes | yes with a matching native runtime |
 | Swift on Mac Catalyst | yes | yes | planned validation |
-| Swift on iOS | yes | limited by app filesystem policy | no |
+| Swift on iOS | yes | limited by app filesystem policy | experimental: Skippy linked into MeshLLMFFI |
 
 Targets without validated local serving should surface the typed `ServingUnsupported` error. Do not silently fall back to a fake local implementation.
 
 ## Native runtime artifacts
 
-The language package provides the API and native bridge. Local inference also needs a release runtime artifact for the host platform and backend, such as Metal on Apple Silicon or CUDA on Linux. Runtime artifacts are selected and verified against the Mesh release and exact Skippy ABI; they are not compiled implicitly by npm, SwiftPM, Maven, or Cargo.
+The language package provides the API and native bridge. Desktop local inference also needs a release runtime artifact for the host platform and backend, such as Metal on Apple Silicon or CUDA on Linux. iOS XCFramework and Android AAR builds compile with `static-serving` so Skippy is linked into `libmeshllm_ffi`; do not download a desktop `meshllm-native-runtime-*` into a phone app. Phone serving is wired, not CI-certified on a physical device.
 
 Serving apps can either:
 

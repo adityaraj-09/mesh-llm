@@ -868,7 +868,12 @@ pub(super) async fn split_generation_load_settings<'a>(
     }
     // Stage zero replaces this placeholder with its graph-observed output
     // boundary after the native runtime has been constructed.
-    let embedded_openai = resolved.to_embedded_openai_args(0, true)?;
+    let mut embedded_openai = resolved.to_embedded_openai_args(0, true)?;
+    super::decode_amplification::apply_link_aware_speculative_floors(
+        &mut embedded_openai,
+        spec.generation.stages.len(),
+        &spec.generation.participants,
+    );
     let lifecycle = configured_stage_lifecycle_intervals(spec.mesh_config, spec.config_model_id);
     let runtime_options = resolved.to_embedded_runtime_options(
         &spec.skippy_telemetry,

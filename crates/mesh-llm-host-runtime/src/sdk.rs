@@ -22,6 +22,7 @@ use tokio::sync::Mutex;
 mod embedded_config;
 pub(crate) mod embedded_logging;
 mod embedded_startup;
+mod on_device_serving;
 
 pub use embedded_config::*;
 
@@ -505,6 +506,7 @@ impl ServingController for EmbeddedServingController {
                 SkippyModelLoadOptions::for_direct_gguf(&model_id, &model_path),
                 &device_policy,
             )?;
+            let options = on_device_serving::apply_on_device_defaults(options, &device_policy);
             let handle = tokio::task::spawn_blocking(move || SkippyModelHandle::load(options))
                 .await
                 .context("join embedded model load task")??;

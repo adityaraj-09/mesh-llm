@@ -181,12 +181,20 @@ parallel lanes, and remaining VRAM margin. This lets a lower-context two-stage
 topology beat a higher-context four-stage topology when the deeper topology
 cannot hit the decode budget.
 
+Phone-class and other constrained peers (`usable VRAM <= 8 GiB`) lower the
+auto-plan context floor from 64k to 4k and cap auto lanes at 1. High-VRAM
+meshes keep the 64k floor; the lower floor only *adds* smaller context options
+so a two-phone split can launch instead of failing closed. After a high-RTT
+plan is chosen, the host raises speculative verify-window / MTP floors so one
+round-trip can cover several candidate tokens. See
+`skippy-coordinator::decode_amplification`.
+
 ```mermaid
 flowchart TD
     Input["Model metadata and node VRAM budgets"]
-    Context["Try context candidates from native down to 64k"]
+    Context["Try context candidates from native down to 64k, or 4k on constrained devices"]
     Nodes["Try node counts from minimum upward"]
-    Lanes["Try parallel lanes from 4 down to 1"]
+    Lanes["Try parallel lanes from 4 down to 1, or 1 on constrained devices"]
     Fit{"Can all layers fit?"}
     Latency{"Latency inputs?"}
     Score["Score by TPOT, then context, lanes, VRAM"]
@@ -202,15 +210,14 @@ flowchart TD
     Latency -- "yes" --> Score
     Score --> Plan
     Fit -- "no" --> Lanes
-    Context -- "below 64k floor" --> Reject
+    Context -- "below device-class floor" --> Reject
 ```
 
 The planner refuses bad topologies. A split does not launch when the layers
 cannot be distributed over the selected nodes, or when the highest feasible
-context would fall below the shared 64k context floor. For models with native
-context below 64k, the floor is capped at the model's native context length.
-Explicit context overrides are also rejected if they exceed the native context
-or fall below that shared floor.
+context would fall below the device-class floor (64k on workstation/GPU nodes,
+4k on constrained devices). For models with native context below that floor,
+the floor is capped at the model's native context length.
 
 Memory fitting is approximate and intentionally conservative. For each
 candidate shape, the planner estimates per-layer memory as:
@@ -242,6 +249,8 @@ outcomes:
 - `10 x 80 GiB`: still `5` stages, native `262_144` context, `4` lanes,
   because five nodes are enough and fewer nodes wins before more lanes.
 - capped or lower-VRAM nodes receive fewer layers than larger peers.
+- two 6 GiB phone-class peers can plan a small layer package below the 64k
+  floor (typically 4k–8k, one lane) instead of failing closed.
 
 ## Load Fencing
 

@@ -138,6 +138,14 @@ local decode compute is counted. A three-stage topology is only feasible if
 compute and protocol overhead are almost zero. A two-stage topology leaves real
 latency headroom, if the two peers can satisfy residency.
 
+Phone Wi-Fi and cellular hops are typically 40–150 ms, so even a two-stage
+serial decode misses the 33 ms budget. The host therefore *raises* speculative
+verify-window and native MTP floors on high-RTT splits instead of shrinking
+them: more candidate tokens per round-trip is how a phone-class mesh recovers
+tok/s. Constrained devices (`usable VRAM <= 8 GiB`) also drop the auto context
+floor from 64k to 4k so KV can fit. See `skippy-coordinator::decode_amplification`
+and [SKIPPY_SPLITS.md](../SKIPPY_SPLITS.md#phones-and-other-low-memory-peers).
+
 The old planning intuition was memory-first: use every feasible peer, split the
 layers evenly, and accept the extra hops as the cost of fitting the model.
 

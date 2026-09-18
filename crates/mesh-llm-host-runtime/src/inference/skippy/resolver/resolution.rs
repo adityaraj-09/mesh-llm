@@ -49,8 +49,11 @@ fn resolve_skippy_config_with_context(
     // resolves to f16 instead of failing the context build. Explicit config /
     // family defaults still take precedence in resolve_cache_type_* below and
     // are intentionally not guarded here.
-    let kv_policy = KvCachePolicy::for_model_size(context.request.model_bytes)
-        .guarded_for_model(context.request.compact_meta);
+    let kv_policy = KvCachePolicy::for_model_and_device(
+        context.request.model_bytes,
+        context.request.allocatable_memory_bytes,
+    )
+    .guarded_for_model(context.request.compact_meta);
     let hardware = resolve_hardware_config(&context)?;
     let family_policy = family_policy_for_model_path(&hardware.resolved_model_path);
     let model_fit = resolve_model_fit_config(&context, kv_policy, &family_policy)?;
